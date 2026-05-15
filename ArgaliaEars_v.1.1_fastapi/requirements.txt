@@ -1,0 +1,2 @@
+silero_vad 6.2.1
+faster-whisper 1.2.1

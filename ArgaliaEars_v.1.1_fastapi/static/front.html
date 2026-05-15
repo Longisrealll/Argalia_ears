@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FastAPI PCM Audio Stream</title>
+  <style>
+    #recordBtn { padding: 10px 20px; font-size: 16px; }
+    #waveform { border: 1px solid #ccc; margin-top: 10px; }
+    #transcription { margin-top: 20px; font-size: 18px; white-space: pre-line; }
+  </style>
+</head>
+<body>
+  <button id="recordBtn">🎙️ Start Recording</button>
+  <div id="transcription">Transcription will appear here...</div>
+
+  <script>
+    const recordBtn = document.getElementById("recordBtn");
+    const transcriptionDiv = document.getElementById("transcription");
+
+    let ws;
+    let audioContext;
+    let processor;
+    let source;
+    let isRecording = false;
+
+    recordBtn.onclick = async () => {
+      if (!isRecording) {
+        // Connect to FastAPI WebSocket
+        ws = new WebSocket("ws://127.0.0.1:8000/ws");
+        ws.onmessage = (event) => {
+          transcriptionDiv.innerText += "\n" + event.data;
+        };
+
+        // Get microphone stream
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // Force 16kHz mono audio
+        audioContext = new AudioContext({ sampleRate: 16000 });
+        source = audioContext.createMediaStreamSource(stream);
+        await audioContext.audioWorklet.addModule("./linear-pcm-processor.js");
+
+        // Capture audio frames
+        processor = new AudioWorkletNode(audioContext, "linear-pcm-processor");;
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        processor.port.onmessage = (e) => {
+          // const input = e.inputBuffer.getChannelData(0); // mono
+          // const pcm16 = new Int16Array(input.length);
+          // for (let i = 0; i < input.length; i++) {
+          //   let s = Math.max(-1, Math.min(1, input[i]));
+          //   // test this one out first, idk what this is
+          //   pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          // }
+          if (ws.readyState === WebSocket.OPEN) {
+            // console.log(e.data.length)
+            ws.send(e.data); // send raw PCM to FastAPI
+          }
+        };
+
+        // Waveform visualization
+        // const analyser = audioContext.createAnalyser();
+        // source.connect(analyser);
+        // const bufferLength = analyser.frequencyBinCount;
+        // const dataArray = new Uint8Array(bufferLength);
+
+        recordBtn.innerText = "⏹ Stop Recording";
+        isRecording = true;
+      } else {
+        processor.disconnect();
+        source.disconnect();
+        audioContext.close();
+        ws.close();
+        recordBtn.innerText = "🎙️ Start Recording";
+        isRecording = false;
+      }
+    };
+  </script>
+</body>
+</html>
