@@ -2,7 +2,8 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 import numpy as np
-from vadVer import Transcriber
+# from vadVer import Transcriber
+from test import Transcriber
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -45,8 +46,8 @@ async def websocket_end(websocket: WebSocket):
         while runData:
             # Receive raw PCM bytes from frontend
             data = await websocket.receive_bytes()
-            theNum = np.frombuffer(data, dtype=np.int16).astype(np.float32)
-            # print(f"{theNum}")
+            theNum = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
+            # print(len(theNum))
             # await websocket.send_text(f"the data is: {len(theNum)} long")
             datas = await app.state.calls.main(theNum, websocket)
 

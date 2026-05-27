@@ -4,7 +4,7 @@ class LinearPCMProcessor extends AudioWorkletProcessor {
   // buffer is full, which means a large buffer will emit less frequently (higher
   // latency), but more efficiently (fewer I/O interruptions between the worker and
   // the main thread)
-  static BUFFER_SIZE = 8192;
+  static BUFFER_SIZE = 512;
 
   constructor() {
     super();
